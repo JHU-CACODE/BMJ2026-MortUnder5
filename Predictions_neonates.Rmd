@@ -204,9 +204,9 @@ vr2 <- unique(vrcountries$isocode)
 # Dimplified the covariate data (no need to repeat this)
 # DD <- read_csv("DATA/CovariateDatabase2023-wide_20250728.csv")
 # transmute(DD, iso3, country_name, year, u5mr_sm, nmr_sm, gfr_sm, sab_sm, lbw_sm, vac_dtp3_sm, vac_bcg_sm, pab_sm, literacy_f_sm, gni_sm, gini_sm, anc4_sm) %>%
-#  write_csv(file="DATA/CovariateDatabase2023-simplified.csv")
+#  write_csv(file="DATA/CovariateDatabase2023-wide_20250728_reduced.csv")
 
-pred_wide_2025 <- read_csv("DATA/CovariateDatabase2023-simplified.csv")
+pred_wide_2025 <- read_csv("DATA/CovariateDatabase2023-wide_20250728_reduced.csv")
 
 data.predict_2025 <- transmute(pred_wide_2025, iso3, country=country_name, year,
                                intercept = 1,
