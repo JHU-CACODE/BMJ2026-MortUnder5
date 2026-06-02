@@ -14,4 +14,7 @@ Follow these steps:
     1. Generate the Models for LOW Mortality countries: Run the cript "Estimate_LM.R" in your working directory. This will read the file "data_neonates_LM_20250830.RData" from your DATA subfolder and will generate two model files in your MODELS subfolder: "Stan_LM_early_new_0.07_1.RData", "Stan_LM_late_new_0.07_1.RData". Unfortunately these files ar to large (around 62MB each) and we could not provide copies of them here.
     2. Generate the Models for HIGH Mortality countries: Run the cript "Estimate_HM.R" in your working directory. This will read the file "data_neonates_20250912.RData" from your DATA subfolder and will generate two model files in your MODELS subfolder: "Stan_HM_CD_new_unc_0.07_150.RData", "Stan_HM_CD_new_cal_0.07_150.RData". Unfortunately these files ar to large (around 70MB each) and we could not provide copies of them here.
 3. PREDICTION of DEATHS
-    1. Run the R-script  
+    1. Run the Rmarkdown script  "Predictions_neonates.Rmd", this will:
+       - Read the files from the DATA subfolder:  "CountryModelClass_20240814.xlsx", "good_VRneonates_observed_20250828.dta", "CovariateDatabase2023-wide_20250728_reduced.csv", "CovariateDatabaseIndia2023-wide_20250724.csv"
+       - It will read the four models generated in point 2 above and stored in the MODELS subfolder
+       - It will predict point estimates for the countries and generate the following files that will be saved in the PREDICTIONS subfolder in your system: "PointEstimates_neonates_long.RData" and "PointEstimates_neonates_wide.RData". For you convenience we have put copies of these files in the PREDICTIONS subfolder with names starting with "OUTPUT_"
