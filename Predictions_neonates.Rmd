@@ -239,17 +239,12 @@ data.predict_ind_2025 <- transmute(pred_ind_2025, iso3=india_state, country=regi
   left_join(transmute(filter(data.predict_2025, iso3=="IND"), year, gini, gni)) %>%
   filter(year>=2000) %>% arrange(iso3, year) %>% mutate(pid=c(1:nrow(.))) %>%
   group_by(iso3) %>% mutate(lbw=ifelse(is.na(lbw),lag(lbw),lbw), nnd=ifelse(is.na(nnd),lag(nnd),nnd)) %>% ungroup()
-#table(data.predict_ind_2025$iso3)
-summary(data.predict_ind_2025$dpt)
-tapply(data.predict_ind_2025$dpt, data.predict_ind_2025$year, summary)
-tapply(data.predict_ind_2025$pab, data.predict_ind_2025$year, summary)
+
 
 data.predict_all_2025 <- filter(data.predict_2025, iso3!="IND") %>% 
                          mutate(nnd=1) %>% 
                          bind_rows(data.predict_ind_2025, .id="data")
-table(data.predict_all_2025$year)
-summary(data.predict_all_2025)
-table(data.predict_all_2025$iso3)
+
 
 d24<- data.predict_all_2025 %>% filter(year==2023)
 d24$year<- 2024
@@ -315,11 +310,10 @@ PHLw <- filter(PHLM, model=="qr") %>%
   mutate(HM=NULL, LM=NULL) %>% 
   pivot_wider(names_from=cod, values_from=AM) 
 
-#causes<- c("congenital","diarrhoea","intrapartum","other","pneumonia",          "preterm","sepsis","tetanus","injuries")
+#causes<- c("congenital","diarrhoea","intrapartum","other","pneumonia", "preterm","sepsis","tetanus","injuries")
 # for(cs in causes) PHLw[, paste0("f_",cs)]<- PHLw[, cs]
 
 save(PHLw, file="PREDICTIONS/PointEstimates_neonates_wide.RData")
-write.csv(PHLw, file="PREDICTIONS/PointEstimates_neonates_wide.csv")
 
 ```
 
