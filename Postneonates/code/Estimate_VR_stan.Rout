@@ -1,0 +1,583 @@
+
+R version 4.5.0 (2025-04-11) -- "How About a Twenty-Six"
+Copyright (C) 2025 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin20
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘.__C__C++Object’
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘.__C__C++Object’
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘.__C__C++Object’
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘.__C__C++Object’
+[Previously saved workspace restored]
+
+> 
+> options(width=110)
+> options("width")
+$width
+[1] 110
+
+> #head(studies)
+> sessionInfo()
+R version 4.5.0 (2025-04-11)
+Platform: aarch64-apple-darwin20
+Running under: macOS Sequoia 15.5
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib 
+LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+time zone: America/New_York
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+loaded via a namespace (and not attached):
+ [1] vctrs_0.6.5         cli_3.6.5           rlang_1.1.6         generics_0.1.4      RcppParallel_5.1.10
+ [6] glue_1.8.0          rstan_2.32.7        gridExtra_2.3       pkgbuild_1.4.8      stats4_4.5.0       
+[11] scales_1.4.0        StanHeaders_2.32.10 grid_4.5.0          tibble_3.2.1        lifecycle_1.0.4    
+[16] QuickJSR_1.7.0      inline_0.3.21       compiler_4.5.0      codetools_0.2-20    dplyr_1.1.4        
+[21] RColorBrewer_1.1-3  Rcpp_1.0.14         pkgconfig_2.0.3     rstudioapi_0.17.1   farver_2.1.2       
+[26] R6_2.6.1            tidyselect_1.2.1    parallel_4.5.0      pillar_1.10.2       magrittr_2.0.3     
+[31] loo_2.8.0           gtable_0.3.6        matrixStats_1.5.0   ggplot2_3.5.2      
+> rm(list=ls())
+> 
+> ## real data ----
+> ### load ----
+> # rm(list=ls())
+> load("../data/Make_input_data_VR.RData") 
+> dim(studies)
+[1] 1097   33
+> table(studies$year)
+
+1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 
+   2    6   13   20   27   32   36   40   40   40   41   45   44   46   44   47   49   46   48   47   51   45 
+2016 2017 2018 2019 2020 2021 2022 2023 
+  45   44   46   44   32   38   28   11 
+> unique(studies$isocode)
+ [1] "ARG" "AUS" "AUT" "BEL" "BGR" "BHR" "BHS" "BLZ" "BRA" "CAN" "CHE" "CHL" "COL" "CRI" "CUB" "CZE" "DEU"
+[18] "DNK" "ECU" "ESP" "EST" "FIN" "FRA" "GBR" "GRC" "GUY" "HRV" "HUN" "IRL" "ISR" "ITA" "JAM" "JPN" "KGZ"
+[35] "KOR" "KWT" "LTU" "LVA" "MDA" "MEX" "MUS" "NIC" "NLD" "NOR" "NZL" "PAN" "POL" "PRT" "ROU" "SGP" "SRB"
+[52] "SUR" "SVK" "SVN" "SWE" "TTO" "TUR" "URY" "USA" "VEN"
+> 
+> #dim(data.predict)
+> studies$rG<- as.numeric(as.factor(studies$isocode))
+> dim(studies)
+[1] 1097   34
+> table(studies$Iwhoreg6_3)
+
+   0    1 
+1057   40 
+> studies$intercept<-1
+> #load("../results/VR.RData")
+> #out$Studies$rG
+> #LASSO_VR_jags = out
+> 
+> 
+> 
+> # ######################################################################## #
+> # user specifications ----
+> # ######################################################################## #
+> 
+> ## paths ----
+> ### sourcecode ----
+> #sourcecode.path = "/Users/sandipanpramanik/mystaff/JHU/research/postdoc/ca-code/cacode modeling scripts/code/sourcecode/5-12-25"
+> 
+> ### data ----
+> #oldcode.path.jags = "/Users/sandipanpramanik/mystaff/JHU/research/postdoc/ca-code/cacode modeling scripts/postneonatal_cod/results"
+> 
+> ### where to save output ----
+> output.path = file.path(getwd(), "../results")
+> 
+> ### causes ----
+> (causes = c("pneumonia", "diarrhea", "meningitis", "perinatal",
++             "othergroup1", "congenital", "otherncd", "injuries"))
+[1] "pneumonia"   "diarrhea"    "meningitis"  "perinatal"   "othergroup1" "congenital"  "otherncd"   
+[8] "injuries"   
+> 
+> ### covariates ----
+> (covariates = c("intercept","Iwhoreg6_3", "year","ln_5q0_cov", "ln_ppp_cov",
++                 "Hib3_cov", "skilled_ba_cov"))
+[1] "intercept"      "Iwhoreg6_3"     "year"           "ln_5q0_cov"     "ln_ppp_cov"     "Hib3_cov"      
+[7] "skilled_ba_cov"
+> 
+> ### covariates for which beta not to shrink ----
+> (covariates.noshrink = "intercept") #"Iwhoreg6_3")
+[1] "intercept"
+> 
+> ## fixed hyperparameter to cross-validate ----
+> rsdlim.fixed = 0.04  # max value of sd_re[j] where N(0, sd_re[j]^2) prior on random effects
+> lambda.fixed = 0.9  # lambda in laplace for bayesian lasso
+> 
+> ## mcmc specifics ----
+> nMCMC = 1000
+> nBurn = 1000
+> adapt_delta_stan = .9
+> 
+> 
+> 
+> # ######################################################################## #
+> # quantities required for modeling ----
+> # ######################################################################## #
+> 
+> ## stan object ----
+> library(rstan)
+Loading required package: StanHeaders
+
+rstan version 2.32.7 (Stan version 2.32.2)
+
+For execution on a local, multicore CPU with excess RAM we recommend calling
+options(mc.cores = parallel::detectCores()).
+To avoid recompilation of unchanged Stan programs, we recommend calling
+rstan_options(auto_write = TRUE)
+For within-chain threading using `reduce_sum()` or `map_rect()` Stan functions,
+change `threads_per_chain` option:
+rstan_options(threads_per_chain = 1)
+
+> rstan::rstan_options(auto_write = TRUE)
+> 
+> model.stan_object = rstan::stan_model(file = "VR.stan") #,
+>                                       #auto_write = rstan::rstan_options("auto_write"=TRUE))
+> 
+> 
+> 
+> ### covariate ----
+> #head(LASSO_VR_jags$Studies)
+> #dim(LASSO_VR_jags$Studies)
+> 
+> ### misreporting matrix, death counts ----
+> #head(LASSO_VR_jags$Deaths)
+> #dim(LASSO_VR_jags$Deaths)
+> 
+> nCause = length(causes) # number of causes
+> nCovariate = length(covariates) # number of covariates
+> nCovariate.noshrink = length(covariates.noshrink) # which beta not to shrink
+> 
+> ### countries for random effects ----
+> (countries = sort(unique(studies$isocode)))
+ [1] "ARG" "AUS" "AUT" "BEL" "BGR" "BHR" "BHS" "BLZ" "BRA" "CAN" "CHE" "CHL" "COL" "CRI" "CUB" "CZE" "DEU"
+[18] "DNK" "ECU" "ESP" "EST" "FIN" "FRA" "GBR" "GRC" "GUY" "HRV" "HUN" "IRL" "ISR" "ITA" "JAM" "JPN" "KGZ"
+[35] "KOR" "KWT" "LTU" "LVA" "MDA" "MEX" "MUS" "NIC" "NLD" "NOR" "NZL" "PAN" "POL" "PRT" "ROU" "SGP" "SRB"
+[52] "SUR" "SVK" "SVN" "SWE" "TTO" "TUR" "URY" "USA" "VEN"
+> nCountry = length(countries)
+> 
+> ### studies ----
+> nStudy = nrow(studies)
+> studies.name = paste0("study", 1:nStudy)
+> 
+> ### design matrix ----
+> Xmat.shrink = studies[,covariates[!(covariates %in% covariates.noshrink)]]
+> head(Xmat.shrink)
+  Iwhoreg6_3 year ln_5q0_cov ln_ppp_cov Hib3_cov skilled_ba_cov
+1          0 2003   2.880884   9.705086 0.933125      0.9889375
+2          0 2005   2.817404   9.802975 0.949375      0.9886250
+3          0 2006   2.786812   9.873766 0.939375      0.9859375
+4          0 2007   2.759844   9.931741 0.932500      0.9801875
+5          0 2008   2.733638   9.976092 0.928750      0.9725625
+6          0 2009   2.704312  10.003526 0.926875      0.9697500
+> 
+> #### standardize relevant covariates ----
+> Xmat.shrink = scale(x = Xmat.shrink)
+> head(Xmat.shrink)
+     Iwhoreg6_3       year ln_5q0_cov ln_ppp_cov  Hib3_cov skilled_ba_cov
+[1,]  -0.194444 -0.9410481  1.2522369 -0.7780416 0.4222015     0.17958829
+[2,]  -0.194444 -0.6646546  1.1597829 -0.6244172 0.4802518     0.16594440
+[3,]  -0.194444 -0.5264578  1.1152278 -0.5133213 0.4445285     0.04860689
+[4,]  -0.194444 -0.3882611  1.0759507 -0.4223364 0.4199688    -0.20244082
+[5,]  -0.194444 -0.2500643  1.0377830 -0.3527333 0.4065725    -0.53535190
+[6,]  -0.194444 -0.1118676  0.9950714 -0.3096794 0.3998744    -0.65814697
+> 
+> #### appending intercept and not to shrink covariates at the front ----
+> Xmat = cbind(studies[,covariates.noshrink],
++              Xmat.shrink)
+> 
+> # adding intercept to the list
+> nCovariate = length(covariates)
+> nCovariate.noshrink = length(covariates.noshrink)
+> 
+> rownames(Xmat) = studies.name
+> colnames(Xmat) = covariates
+> head(Xmat)
+       intercept Iwhoreg6_3       year ln_5q0_cov ln_ppp_cov  Hib3_cov skilled_ba_cov
+study1         1  -0.194444 -0.9410481  1.2522369 -0.7780416 0.4222015     0.17958829
+study2         1  -0.194444 -0.6646546  1.1597829 -0.6244172 0.4802518     0.16594440
+study3         1  -0.194444 -0.5264578  1.1152278 -0.5133213 0.4445285     0.04860689
+study4         1  -0.194444 -0.3882611  1.0759507 -0.4223364 0.4199688    -0.20244082
+study5         1  -0.194444 -0.2500643  1.0377830 -0.3527333 0.4065725    -0.53535190
+study6         1  -0.194444 -0.1118676  0.9950714 -0.3096794 0.3998744    -0.65814697
+> table(studies$year)
+
+1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 
+   2    6   13   20   27   32   36   40   40   40   41   45   44   46   44   47   49   46   48   47   51   45 
+2016 2017 2018 2019 2020 2021 2022 2023 
+  45   44   46   44   32   38   28   11 
+> 
+> 
+> # ######################################################################## #
+> # model fitting ----
+> # ######################################################################## #
+> nchain<- 4
+> 
+> ## stan fit ----
+> ptm0 = Sys.time()
+> stanfit = rstan::sampling(model.stan_object,
++                           data = c(
++                             list(
++                               "nStudy" = nStudy,
++                               "nCause" = nCause,
++                               "nCumreport" = c(0,
++                                                cumsum(as.numeric(table(deaths$sid)))),
++                               "Missreport" = deaths[,causes],
++                               "nDeaths" = deaths$n,
++                               "nre" = length(countries),
++                               "reid" = studies$rG,
++                               "K" = nCovariate,
++                               "nNoshrink" = nCovariate.noshrink,
++                               "Xmat" = Xmat,
++                               "sd_betareg_noshrink" = .5,
++                               "rsdlim" = rsdlim.fixed,
++                               "lambda" = lambda.fixed
++                             )
++                           ),
++                           pars = c(
++                             'B', 're', 'sd_re', 'loglik'
++                           ),
++                           include = T,
++                           chains = nchain, 
++                           iter = nBurn + nMCMC, warmup = nBurn,
++                           control = list('adapt_delta' = adapt_delta_stan),
++                           seed = 1)
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 1).
+Chain 1: 
+Chain 1: Gradient evaluation took 0.001668 seconds
+Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 16.68 seconds.
+Chain 1: Adjust your expectations accordingly!
+Chain 1: 
+Chain 1: 
+Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
+Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
+Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
+Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
+Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 1: 
+Chain 1:  Elapsed Time: 88.015 seconds (Warm-up)
+Chain 1:                72.104 seconds (Sampling)
+Chain 1:                160.119 seconds (Total)
+Chain 1: 
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 2).
+Chain 2: 
+Chain 2: Gradient evaluation took 0.001145 seconds
+Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 11.45 seconds.
+Chain 2: Adjust your expectations accordingly!
+Chain 2: 
+Chain 2: 
+Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
+Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
+Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
+Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
+Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 2: 
+Chain 2:  Elapsed Time: 88.341 seconds (Warm-up)
+Chain 2:                71.933 seconds (Sampling)
+Chain 2:                160.274 seconds (Total)
+Chain 2: 
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 3).
+Chain 3: 
+Chain 3: Gradient evaluation took 0.001148 seconds
+Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 11.48 seconds.
+Chain 3: Adjust your expectations accordingly!
+Chain 3: 
+Chain 3: 
+Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
+Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
+Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
+Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
+Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 3: 
+Chain 3:  Elapsed Time: 91.747 seconds (Warm-up)
+Chain 3:                71.678 seconds (Sampling)
+Chain 3:                163.425 seconds (Total)
+Chain 3: 
+
+SAMPLING FOR MODEL 'anon_model' NOW (CHAIN 4).
+Chain 4: 
+Chain 4: Gradient evaluation took 0.001111 seconds
+Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 11.11 seconds.
+Chain 4: Adjust your expectations accordingly!
+Chain 4: 
+Chain 4: 
+Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
+Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
+Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
+Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
+Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
+Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
+Chain 4: 
+Chain 4:  Elapsed Time: 83.28 seconds (Warm-up)
+Chain 4:                71.769 seconds (Sampling)
+Chain 4:                155.049 seconds (Total)
+Chain 4: 
+> ptm1 = Sys.time()
+> ptm1-ptm0 # time taken in seconds
+Time difference of 10.73591 mins
+> 
+> 
+> # Save means and SD of predictors for standardisation:
+> dv <- data.frame(xvar=covariates, mean = colMeans(studies[, covariates], na.rm = T), 
++                  sd = apply(studies[, covariates], 2, sd, na.rm=T), 
++                  stringsAsFactors = F, row.names = NULL)
+> ## MCMC output ----
+> MCMCout = rstan::extract(stanfit)
+> 
+> names(MCMCout)
+[1] "B"      "re"     "sd_re"  "loglik" "lp__"  
+> 
+> 
+> dim(MCMCout$B)
+[1] 4000    7    7
+> dim(MCMCout$re)
+[1] 4000   60    7
+> dim(MCMCout$sd_re)
+[1] 4000    7
+> 
+> dimnames(MCMCout$B) = list(NULL, covariates, causes[-1])
+> dimnames(MCMCout$re) = list(NULL,
++                             countries,
++                             causes[-1])
+> colnames(MCMCout$sd_re) = causes[-1]
+> 
+> dimnames(MCMCout$B)
+[[1]]
+NULL
+
+[[2]]
+[1] "intercept"      "Iwhoreg6_3"     "year"           "ln_5q0_cov"     "ln_ppp_cov"     "Hib3_cov"      
+[7] "skilled_ba_cov"
+
+[[3]]
+[1] "diarrhea"    "meningitis"  "perinatal"   "othergroup1" "congenital"  "otherncd"    "injuries"   
+
+> dimnames(MCMCout$re)
+[[1]]
+NULL
+
+[[2]]
+ [1] "ARG" "AUS" "AUT" "BEL" "BGR" "BHR" "BHS" "BLZ" "BRA" "CAN" "CHE" "CHL" "COL" "CRI" "CUB" "CZE" "DEU"
+[18] "DNK" "ECU" "ESP" "EST" "FIN" "FRA" "GBR" "GRC" "GUY" "HRV" "HUN" "IRL" "ISR" "ITA" "JAM" "JPN" "KGZ"
+[35] "KOR" "KWT" "LTU" "LVA" "MDA" "MEX" "MUS" "NIC" "NLD" "NOR" "NZL" "PAN" "POL" "PRT" "ROU" "SGP" "SRB"
+[52] "SUR" "SVK" "SVN" "SWE" "TTO" "TUR" "URY" "USA" "VEN"
+
+[[3]]
+[1] "diarrhea"    "meningitis"  "perinatal"   "othergroup1" "congenital"  "otherncd"    "injuries"   
+
+> colnames(MCMCout$sd_re)
+[1] "diarrhea"    "meningitis"  "perinatal"   "othergroup1" "congenital"  "otherncd"    "injuries"   
+> 
+> 
+> ## diagnostics ----
+> ### max Rhat ----
+> (max_Rhat = max(apply(X = MCMCout$B, 2:3,
++                       FUN = function(v){
++                         
++                         rstan::Rhat(v)
++                         
++                       }),
++                 apply(X = MCMCout$re, 2:3,
++                       FUN = function(v){
++                         
++                         rstan::Rhat(v)
++                         
++                       }),
++                 apply(X = MCMCout$sd_re, 2,
++                       FUN = function(v){
++                         
++                         rstan::Rhat(v)
++                         
++                       })))
+[1] 1.005374
+> 
+> ### min bulk ESS ----
+> (min_ess_bulk = min(apply(X = MCMCout$B, 2:3,
++                           FUN = function(v){
++                             
++                             rstan::ess_bulk(v)
++                             
++                           }),
++                     apply(X = MCMCout$re, 2:3,
++                           FUN = function(v){
++                             
++                             rstan::ess_bulk(v)
++                             
++                           }),
++                     apply(X = MCMCout$sd_re, 2,
++                           FUN = function(v){
++                             
++                             rstan::ess_bulk(v)
++                             
++                           }))/nMCMC)
+[1] 2.962825
+> 
+> ### information criterion for model selection performacne ----
+> #### loo ic ----
+> MCMCout$loo.out = loo::loo(MCMCout$loglik, 
++                            r_eff = loo::relative_eff(exp(MCMCout$loglik), 
++                                                      chain_id = rep(1, nrow(MCMCout$loglik))), 
++                            cores = 1)
+Warning message:
+Some Pareto k diagnostic values are too high. See help('pareto-k-diagnostic') for details.
+ 
+> 
+> #### waic ----
+> MCMCout$waic.out = loo::waic(MCMCout$loglik)
+Warning message:
+
+612 (55.8%) p_waic estimates greater than 0.4. We recommend trying loo instead. 
+> 
+> ic.df = rbind(MCMCout$waic.out$estimates,
++               MCMCout$loo.out$estimates)
+> 
+> ic.df.melt = as.numeric(t(ic.df))
+> names(ic.df.melt) = paste0(rep(rownames(ic.df), each = ncol(ic.df)),'_',rep(colnames(ic.df), nrow(ic.df)))
+> 
+> MCMCout$ic.df = ic.df.melt
+> 
+> #### mcmc diagnostic ----
+> (MCMCout$mcmc.diagnostic = c('max_Rhat' = max_Rhat, 'min_ess_bulk' = min_ess_bulk,
++                              'num_divergent' = rstan::get_num_divergent(stanfit),
++                              'num_max_treedepth' = rstan::get_num_max_treedepth(stanfit)))
+         max_Rhat      min_ess_bulk     num_divergent num_max_treedepth 
+         1.005374          2.962825          0.000000          0.000000 
+> 
+> 
+> ## save output ----
+> if(!dir.exists(output.path)){
++   
++   dir.create(output.path)
++   
++ }
+> 
+> 
+> out = list(MCMCout = MCMCout, 
++            time = ptm1-ptm0, rsdlim = rsdlim.fixed,
++            lambda = lambda.fixed,  
++            nchain = nchain, 
++            vdt = causes, 
++            vxf = covariates,
++            Vars=dv, studies=studies)
+> 
+> save(out, file=paste0("../results/VR_lambda", lambda.fixed, 
++                                   "_rsdlim", rsdlim.fixed,".RData"))
+> #mean(MCMCout$B)
+> 
+> xt<-colMeans(MCMCout$B)
+> xt
+                 diarrhea   meningitis   perinatal othergroup1  congenital    otherncd    injuries
+intercept      -2.0774412 -1.416475946 -0.18619306 -0.54659125  1.13241861  0.95402435  0.62873158
+Iwhoreg6_3     -0.4951037 -0.117286302  0.09414318 -0.14254139  0.05303116 -0.10456835 -0.08048347
+year            0.4679908 -0.393068383 -0.09068856 -0.06376260 -0.04859782 -0.12105137 -0.07590803
+ln_5q0_cov      0.3417945 -0.429778423 -0.70509215 -0.15939472 -0.48387622 -0.58865463 -0.23549028
+ln_ppp_cov      0.1666002  0.044713753  0.31006156  0.34650467  0.27201051  0.30873284  0.34943067
+Hib3_cov        0.2458377  0.137615049  0.16452255  0.12941873  0.11621293  0.14122773  0.04260795
+skilled_ba_cov  0.2207177  0.002452467  0.07538945 -0.09841753  0.02926347 -0.01283977  0.03901344
+> 
+> xtr<-colMeans(MCMCout$re)
+> head(xtr)
+        diarrhea   meningitis    perinatal  othergroup1  congenital      otherncd    injuries
+ARG -0.372081876 -0.015087237  0.149865780 -0.074398243  0.08250758  0.1472966156  0.02823080
+AUS -0.042753464  0.003825761 -0.135605282 -0.005907163 -0.25394169  0.1186050976  0.20323855
+AUT -0.003366601  0.042698572  0.033193723 -0.005294073  0.03396291 -0.0531369675 -0.01544069
+BEL -0.009914069  0.214579983 -0.189177048  0.131841479 -0.21644838  0.0006733045  0.16259588
+BGR -0.038837678  0.011100384  0.005593205 -0.183712012 -0.23280174 -0.1859539817 -0.19644294
+BHR  0.004908569 -0.013296178 -0.020894592  0.041652643  0.02111860  0.0541817824  0.06557304
+> 
+> load("../results/VR.RData")
+> xto<-out$output$BUGSoutput$mean$B
+> xto
+            [,1]         [,2]        [,3]        [,4]        [,5]        [,6]        [,7]
+[1,] -1.63254328 -1.237088437 -0.52736666 -0.64427161  1.05462300  0.86204400  0.43077469
+[2,] -0.19794630 -0.186326839  0.13142516 -0.10450060  0.03391710 -0.12430802 -0.04206477
+[3,] -0.01209974 -0.229416864 -0.17817771 -0.18098815 -0.11466359 -0.13309190 -0.12492693
+[4,]  0.61906824 -0.230635347 -1.00451890 -0.11290813 -0.68976152 -0.44603753 -0.50790134
+[5,]  0.21017224  0.292386583  0.29233360  0.27197120  0.20069063  0.39261279  0.11936035
+[6,]  0.08210198 -0.002609386  0.13273375  0.10024523  0.06024787  0.04486874  0.07465389
+[7,] -0.05464665  0.130280369  0.08665861 -0.04369441  0.14253406  0.01300897  0.09331206
+> head(out$output$BUGSoutput$mean$re)
+             [,1]        [,2]       [,3]        [,4]         [,5]         [,6]        [,7]
+[1,] -0.015862494  0.01334388  0.5434614  0.37572906  0.171498613  0.254519874  0.16379469
+[2,] -0.133962184  0.09508274 -0.2017853  0.04464148 -0.365508789  0.091865937  0.20772224
+[3,] -0.125166615  0.03760736  0.1479504  0.03024668  0.144924737 -0.008967325  0.08231963
+[4,]  0.041513490  0.44697769 -0.1923002  0.25219760 -0.226861940  0.138718218  0.09401007
+[5,] -0.553898965 -0.52951086 -0.6435368 -0.83744035 -0.587049802 -0.567921673 -0.71612798
+[6,]  0.009420317  0.02751770  0.1825352  0.12018430 -0.002107534  0.169763216 -0.04895390
+> #out$param$VXF
+> summary(xt - xto)
+    diarrhea          meningitis         perinatal          othergroup1         congenital      
+ Min.   :-0.44490   Min.   :-0.24767   Min.   :-0.037282   Min.   :-0.05472   Min.   :-0.11327  
+ 1st Qu.:-0.28722   1st Qu.:-0.18927   1st Qu.: 0.003229   1st Qu.:-0.04226   1st Qu.: 0.03754  
+ Median :-0.04357   Median :-0.16365   Median : 0.031789   Median : 0.02917   Median : 0.06607  
+ Mean   :-0.02053   Mean   :-0.10120   Mean   : 0.104151   Mean   : 0.02562   Mean   : 0.05470  
+ 3rd Qu.: 0.21955   3rd Qu.:-0.02939   3rd Qu.: 0.193458   3rd Qu.: 0.08611   3rd Qu.: 0.07456  
+ Max.   : 0.48009   Max.   : 0.14022   Max.   : 0.341174   Max.   : 0.11723   Max.   : 0.20589  
+    otherncd            injuries       
+ Min.   :-0.142617   Min.   :-0.05430  
+ 1st Qu.:-0.054864   1st Qu.:-0.03523  
+ Median : 0.012041   Median : 0.04902  
+ Mean   :-0.004604   Mean   : 0.08924  
+ 3rd Qu.: 0.055860   3rd Qu.: 0.21401  
+ Max.   : 0.096359   Max.   : 0.27241  
+> out$vxf
+NULL
+> 
+> proc.time()
+   user  system elapsed 
+646.963   3.074 651.126 

@@ -1,0 +1,888 @@
+
+R version 4.5.0 (2025-04-11) -- "How About a Twenty-Six"
+Copyright (C) 2025 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin20
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘model.stan_object’
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘model.stan_object’
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘model.stan_object’
+Warning: namespace ‘colorspace’ is not available and has been replaced
+by .GlobalEnv when processing object ‘model.stan_object’
+[Previously saved workspace restored]
+
+> rm(list=ls())
+> #####################################################################################################################
+> ###
+> ###   Analysis of final data includingseparate Indian states
+> ###
+> ###   J Perin (July 2025)
+> ###
+> ###   Top ten burden countries (1-59 months)
+> ###
+> ### Nigeria (NGA)
+> ### India (IND) ---- envelopes, aids and measles?
+> ### DRC (COD)
+> ### Pakistan (PAK)
+> ### Ethiopia (ETH)
+> ### China (CHN)
+> ### Tanzania (TZA)
+> ### Indonesian (IDN)
+> ### Angola (AGO)
+> ### Bangladesh (BGD)
+> ### Niger (NER)
+> ###
+> ###
+> #####################################################################################################################
+> 
+> rm(list=ls())
+> Start<- Sys.time()
+> options(width=110)
+> 
+> # for different covariate selection
+> # a - g
+> type_c<-"c"
+> 
+> 
+> for(type_c in letters[1:7]) {
++   print(type_c)
++   
++ #### Analysis of samples
++ library(reshape2)
++ library(R2jags)
++ library(doParallel)
++ library(coda)
++ library(lattice)
++ library(foreign)
++ library(readstata13)
++ library(haven)
++ library(plyr)
++ 
++ 
++ # Read data
++ #load(file="../code_Jags_2020_08 31 wo INCAM/PN_data_2020_08_31_INCAM.RData")
++ #load(file="../data/PN_VA_calibrated.RData")
++ #load(file="../data/Make_input_data_uncalibrated_20241008.RData")
++ #load(file="../data/Make_input_data_20250526_calib.RData")
++ load("../data/Make_input_data_20250721_calib_JP.RData")
++ ls()
++ studies$rG<- as.numeric(as.factor(studies$iso3))
++ studies$pcv<- studies$pcv10+studies$pcv13+studies$pcv7
++ vdr
++ 
++ 
++ 
++ # Whether to use WHO malaria (national history model)
++ MW<- read.csv("../data/WHOmal_20241009.csv")
++ table(MW$malwho, useNA="always")
++ isos.malwho<- unique(MW$iso3[which(MW$malwho==1)])
++ 
++ #for malaria and envelopes
++ path<- "/Users/jamieallen/Documents/Projects/COD/COD_2023/2000-2023/databases/single-causes/"
++ sca<- read.csv(paste0(path,"SingleCauseDatabase2023-wide_20250224.csv"))
++ sca$year<- sca$Year
++ sca$iso3<- sca$ISO3
++ #sc$Malaria
++ table(sca$AgeGroup)
++ tapply(sca$Malaria, sca$AgeGroup, summary)
++ env<- sca[which(sca$AgeGroup=="01to59m" & sca$year>=2000),]
++ env<- as.data.frame(env)
++ env$pnd<- env$Deaths1
++ env$pnd_pcrisis<- env$Deaths2
++ summary(env$pnd_pcrisis - env$pnd)
++ names(env)
++ sc<- sca[which(sca$AgeGroup=="00to04y" & sca$year>=2000),]
++ names(sc)
++ sc<- as.data.frame(sc)
++ summary(sc$Malaria)
++ sc$measin<- sc$Measles
++ sc$measout<- sc$meas_epi
++ sc$tb_resp<- sc$TBre
++ sc$tb_nonresp<- sc$TB
++ sc$mal<- sc$Malaria
++ sc$malwho<- ifelse(sc$iso3 %in% isos.malwho,1,0)
++ sc$hivp<- sc$HIV*(58/59)
++ tmp<- merge(sc[,c("iso3","year","measin","measout","tb_nonresp","tb_resp",
++                   "hivp", "mal", "malwho")], 
++             env[,c("iso3","year","pnd","pnd_pcrisis")], 
++             by=c("iso3","year"))
++ 
++ 
++ table(sc$iso3)
++ 
++ summary(tmp)
++ table(tmp$year)
++ unique(tmp$iso3)
++ sc<- tmp
++ 
++ # Covarites
++ path<-"../data/"
++ nc<- read.dta(paste0(path,"vavr_covariates_20250723.dta"))
++ #nc$pcv
++ summary(nc$pcv)
++ table(nc$pcv>1)
++ # for India states
++ #nc$iso3[which(nchar(nc$iso3)==2)]
++ table(is.na(nc$iso3))
++ nc$iso3<- ifelse(nc$iso3=="NA", nc$india_state23, nc$iso3)
++ table(nchar(nc$iso3))
++ 
++ # as of 07/21/2025, sc is missing India states,
++ # so those are dropped from data here
++ tmp<- merge(sc, nc, by=c("iso3","year"))
++ unique(tmp$iso3)
++ summary(tmp$u5mr)
++ summary(tmp$sanitation)
++ sc<- tmp
++ 
++ sc$envelope_aids_measles_free<- sc$pnd - sc$hivp - sc$measin
++ summary(sc$Deaths2)
++ summary(sc$Measles)
++ summary(sc$envelope_aids_measles_free)
++ 
++ head(sc[which(sc$envelope_aids_measles_free<0),c("iso3","year","measin","measout","pnd","hivp")])
++ head(sc[which(sc$iso3=="NIU"),c("iso3","year","measin","measout",
++                                 "pnd","hivp")], n=20)
++ summary(sc)
++ # FOR NIUE
++ sc$envelope_aids_measles_free<- ifelse(sc$envelope_aids_measles_free==0,1,
++                                                  sc$envelope_aids_measles_free)
++ 
++ names(sc)
++ data.predict<- sc
++ data.predict$isocode<- data.predict$iso3
++ dim(data.predict)
++ table(data.predict$year)
++ length(unique(data.predict$isocode))
++ summary(data.predict$envelope_aids_measles_free==0)
++ 
++ 
++ ###################################X
++ #######   PREDICTIONS     ##########
++ ###################################X
++ load(file=paste0("../results/VA_lambda100_rsdlim0.14_20250724",type_c,".RData"))
++ ebn<-colMeans(out$MCMCout$B)
++ ebn
++ 
++ summary(out$studies$pcv)
++ summary(data.predict$pcv)
++ 
++ summary(out$studies$rota)
++ summary(data.predict$rota)
++ 
++ vxf<- out$vxf
++ vxf
++ vdr
++ 
++ studies$intercept<-1
++ data.predict$intercept<-1
++ 
++ for(i in vxf){
++   print(i)
++   print(summary(studies[,i]))
++   print(summary(data.predict[,i]))
++ }
++ 
++ 
++ 
++ 
++ #function(MO, STUP, NP=500, IDV=c("isocode","year"), PPR=c(0, 0))
++ #iterations saved ,  chains, parameters
++ dim(out$MCMCout$B)
++ 
++ # Scale covariates to match scale used in studies
++ XX <- data.predict[, c(vxf)] 
++ for(vx in vxf[3:length(vxf)]){
++   mn<- out$Vars$mean[which(out$Vars$xvar==vx)]
++     stddev<-out$Vars$sd[which(out$Vars$xvar==vx)]
++   XX[,vx]<- (XX[, vx] - mn)/stddev
++ }
++ 
++ 
++ # Random effects
++ # Assign random effect to country years
++ # only use if there is nationally representative study 
++ MR <- colMeans(out$MCMCout$re, na.rm = T)    # unweighted means of RE
++ rownames(MR)
++ iso.natrep<- unique(studies$iso3[which(studies$nationalrep==1)])
++ iso.natrep<- iso.natrep[which(iso.natrep!="NER")]
++ names(studies)
++ studies$iso3
++ 
++ findRE<- function(iso) { 
++ #  print(iso)
++   if(iso %in% iso.natrep) re<- MR[iso,]
++   else re<- rep(0, length(vdr)-1)
++   re 
++ }
++ findRE("AFG")
++ RE<- do.call("rbind", lapply(data.predict$iso3, findRE))
++ 
++ 
++ # Determine fixed effect and include random effects
++ # Multiply every iteration as matrix with prediction data
++ FFa <- array(NA, dim=c(nrow(data.predict), length(vdr), nrow(out$MCMCout$B)) )
++ FFa[] <- apply(out$MCMCout$B, 1, function(x) {
++   M<-exp(cbind(0, as.matrix(XX) %*% as.matrix(x) + RE) )
++   # translate linear predictors to probabilities
++   MP<- M / rowSums(M)
++   return(MP) }
++   )
++ dim(FFa)
++ 
++ rownames(FFa)<- paste0(data.predict$iso3,".", data.predict$year)
++ colnames(FFa)<- vdr
++ head(FFa[,,1])
++ # table(rowSums(FFa[,,1]))
++ 
++ 
++ 
++ 
++ ####################################
++ #######   WHO REGIONS   ############
++ ####################################
++ codes<- read.dta13("../../other_inputs/codelist region.dta")
++ #head(codes)
++ codes$isocode<- codes$iso3
++ 
++ 
++ ####################################
++ #######   WHO MALARIA   ############
++ ####################################
++ table(data.predict$iso3)
++ data.predict$iso.nat<- ifelse(nchar(data.predict$isocode)>3, "IND", data.predict$isocode)
++ unique(data.predict$iso3)
++ unique(data.predict$iso.nat)
++ 
++ #table(data.predict$iso.nat)
++ dp.nat<- aggregate(data.predict[,c("envelope_aids_measles_free","pfpr")],
++                    by=list(data.predict$year,
++                            data.predict$iso.nat), FUN=sum)
++ names(dp.nat)<- c("year","isocode","envelope_aids_measles_free","pfpr")
++ #head(dp.nat)
++ #dp.nat$pfpr<- ifelse(dp.nat$isocode=="IND", dp.nat$pfpr/21, dp.nat$pfpr)
++ #head(dp.nat)
++ 
++ #malunc<- read.dta("../data/malaria_2000_2019.dta")
++ summary(data.predict$malwho)
++ malunc<- read.dta13("../data/malaria_u5_9Oct2024.dta")
++ malunc<- malunc[which(malunc$iso3 %in% dp.nat$isocode),]
++ 
++ 
++ rownames(malunc)<- paste(malunc$iso3, malunc$year, sep=".")
++ library(arrayhelpers)
++ #source("posthoc_hib.R")
++ source("addWHOmal.R")
++ #names(data.predict)
++ #head(data.predict[,c("isocode","year","envelope")])
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ NSim<- dim(FFa)[3]
++ 
++ ############################################################
++ #Post hoc adjustment
++ rownames(FFa)[1:20]
++ xt<- paste0("NGA.",c(2000:2023))
++ xt<- paste0("PSE.",c(2000:2023))
++ FFa[xt,,1]
++ 
++ xt<- which(data.predict$pfpr==0)
++ summary(FFa[xt,,1])
++ #p21[which(p21$estR[,which()])]
++ 
++ 
++ #for fixed and random
++ #test3<-apply(FFa, 3, FUN=posthoc_hib, verbose=FALSE)
++ #length(test3)
++ 
++ 
++ 
++ 
++ 
++ #Transform list back to array
++ #testPH<-array(unlist(test3), dim = c(nrow(test3[[1]]), ncol(test3[[1]]), length(test3)))
++ #dimnames(testPH)[[1]]<-rownames(p21$estR)
++ #dimnames(testPH)[[2]]<-colnames(p21$estR)
++ #p21.PH<- p21
++ #p21.PH$estR<- testPH
++ #dim(p21.PH$estR)
++ #summary(p21.PH$estR[,,1])
++ 
++ 
++ 
++ ############################################################
++ #Aggregate to national India
++ source("aggregate_India.R")
++ #test4<-apply(p21.PH$estR, 3, FUN=aggregate_India)
++ #length(test4)
++ #head(test4[[1]])
++ #tm<- rownames(test4[[1]])
++ #tm
++ #Transform list back to array
++ #testIND<-array(unlist(test4), dim = c(nrow(test4[[1]]), ncol(test4[[1]]), length(test4)))
++ #testIND<- testPH
++ testIND<- FFa
++ 
++ summary(data.predict$envelope_aids_measles_free)
++ unique(dp.nat$isocode)
++ dim(testIND)
++ #xt<- paste0("IDN.",c(2000:2020))
++ #head(testIND[,,1], n=50)
++ 
++ dimnames(testIND)
++ #dimnames(testIND)[[1]]<-  paste0(dp.nat$isocode,".", dp.nat$year)
++ #dimnames(testIND)[[2]]<-colnames(p21$estR)
++ 
++ xt<- paste0("AGO.",c(2000:2023))
++ testIND[xt,,1]
++ 
++ 
++ 
++ ############################################################
++ #WHO malaria
++ #source("addWHOmal.R")
++ #test2<-apply(p21.IND$estR, 3, FUN=addWHOmal)
++ #warnings()
++ ###vxf
++ #Transform list back to array
++ #testA<-array(unlist(test2), dim = c(nrow(test2[[1]]), ncol(test2[[1]]), length(test2)))
++ #dim(testA)
++ #dimnames(testA)[[1]]<-paste0(dp.nat$isocode,".", dp.nat$year)
++ #dimnames(testA)[[2]]<-colnames(p21$estR)
++ #p21.whoMAL$estR<- testA
++ testA<- testIND
++ 
++ #Make data set of country point estimates
++ dim(testIND)
++ est<-apply(testA, c(1,2), FUN=mean)
++ #lower<-apply(testA, c(1,2), FUN=quantile, probs=c(0.025))
++ #upper<-apply(testA, c(1,2), FUN=quantile, probs=c(0.975))
++ colnames(est) <- vdr #colnames(lower)<-colnames(upper)<-vdr
++ rownames(est) <- paste0(dp.nat$isocode,".", dp.nat$year) #rownames(p21$estR)
++ dim(est)
++ head(est)
++ VA.est<- as.data.frame(est) #merge(est, lower, by="row.names")
++ head(VA.est, n=30)
++ 
++ 
++ #rownames(VA.est)<- VA.est$Row.names
++ #VA.est$Row.names<- NULL
++ #VA.est<- merge(VA.est, upper, by="row.names")
++ #rownames(VA.est)<- VA.est$Row.names
++ temp<-strsplit(rownames(VA.est), split="\\.")
++ head(temp)
++ iso<-as.vector(unlist(lapply(temp , FUN= function(x) x[[1]])))
++ year<-as.vector(unlist(lapply(temp , FUN= function(x) x[[2]])))
++ VA.est$iso3<- iso #dp.nat$isocode
++ VA.est$year <- year #dp.nat$year
++ dim(VA.est)
++ VA.est[which(VA.est$iso3=="IDN"),]
++ 
++ 
++ 
++ dim(VA.est)
++ table(VA.est$iso3)
++ 
++ 
++ VA.est<- merge(VA.est, codes[,c("iso3","whoreg6")], by="iso3")
++ head(VA.est)
++ dim(VA.est)
++ 
++ VA.est$Row.names<- NULL
++ head(VA.est)
++ VA.draws<- testA
++ VA.draws.noPH<- FFa
++ 
++ test<-cbind(VA.est$iso3, dp.nat$isocode)
++ test[900:1200,]
++ 
++ #fractions
++ VA.est[which(VA.est$iso3=="NGA"),]
++ 
++ # To aggregate
++ for( i in vdt) {
++   VA.est[,i]<- VA.est[,i]* dp.nat$envelope_aids_measles_free
++ }
++ 
++ #deaths
++ VA.est[which(VA.est$iso3=="IDN"),]
++ 
++ 
++ 
++ 
++ table(VA.est$year)
++ dim(VA.est)
++ agg.new<-aggregate(VA.est[, c(vdt)], list(VA.est$year), FUN=sum)
++ agg.new$tot<- rowSums(agg.new[,vdt])
++ length(unique(dp.nat$isocode))
++ length(unique(dp.nat$year))
++ 
++ 
++ 
++ 
++ 
++ 
++ #COEFFICIENTS
++ np<- length(vxf) 
++ Best<- colMeans(out$MCMCout$B)
++ Best
++ 
++ length(rep(2:length(vdt), each=np))
++ coef<- data.frame( cause = rep(vdt[-1],each=np), cause.n=rep(2:length(vdt), each=np),
++                    cov=rep(c(vxf), length(vdt) -1),
++                    est=as.vector(Best))
++ coef
++ ############################################
++ 
++ 
++ 
++ unique(data.predict$iso3)
++ unique(dp.nat$isocode)
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ 
++ save(VA.draws, VA.est,
++      file=paste0("../results/Predict_VA_20250724", type_c,".RData"))
++ summary(VA.est)
++ table(VA.est$year)
++ }
+[1] "a"
+Loading required package: rjags
+Loading required package: coda
+Linked to JAGS 4.3.2
+Loaded modules: basemod,bugs
+
+Attaching package: ‘R2jags’
+
+The following object is masked from ‘package:coda’:
+
+    traceplot
+
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "rota"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.05615 0.00000 0.98000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2003  0.3768  0.9902 
+[1] "vac_hib3"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2674  0.7233  0.9800 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.5148  0.8646  0.6849  0.9469  0.9900 
+Package arrayhelpers, version 1.1-0
+
+If you use this package please cite it appropriately.
+   citation("arrayhelpers")
+will give you the correct reference.
+
+The project homepage is http://arrayhelpers.r-forge.r-project.org/
+
+
+[1] "b"
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "pcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.07564 0.00000 0.99000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02623 0.34793 0.45648 0.80445 1.58780 
+[1] "vac_hib3"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2674  0.7233  0.9800 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.5148  0.8646  0.6849  0.9469  0.9900 
+[1] "c"
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "rota"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.05615 0.00000 0.98000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2003  0.3768  0.9902 
+[1] "pcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.07564 0.00000 0.99000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02623 0.34793 0.45648 0.80445 1.58780 
+[1] "vac_hib3"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2674  0.7233  0.9800 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.5148  0.8646  0.6849  0.9469  0.9900 
+[1] "d"
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "vac_hib3"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2674  0.7233  0.9800 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.5148  0.8646  0.6849  0.9469  0.9900 
+[1] "e"
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "pcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.07564 0.00000 0.99000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02623 0.34793 0.45648 0.80445 1.58780 
+[1] "f"
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "pcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.07564 0.00000 0.99000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02623 0.34793 0.45648 0.80445 1.58780 
+[1] "rota"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.05615 0.00000 0.98000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2003  0.3768  0.9902 
+[1] "g"
+[1] "intercept"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "Iagelower_1"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  1.0000  1.0000  0.7859  1.0000  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+      1       1       1       1       1       1 
+[1] "u5mr"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  10.71   46.26   71.13   76.53   88.10  251.87 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.513   8.564  20.577  37.377  52.484 227.055 
+[1] "pfpr"
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0000000 0.0008854 0.0032998 0.0712267 0.0751821 0.7345144 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.000e+00 0.000e+00 1.000e-08 4.632e-02 3.734e-03 7.162e-01 
+[1] "gni"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1170    2130    3204    4050    4337   15316 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   693.7   4459.9  11089.6  19746.7  26330.4 757167.3 
+[1] "mcv"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0100  0.6900  0.8350  0.7743  0.9123  1.0000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.8042  0.9144  0.8575  0.9619  0.9901 
+[1] "yr_mid"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   1980    2002    2006    2005    2011    2022 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   2000    2006    2012    2012    2017    2023 
+[1] "sanitation"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0060  0.2117  0.4867  0.4868  0.7347  0.9890 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0691  0.6471  0.9250  0.7974  0.9928  1.0000 
+[1] "wasting"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.01300 0.04544 0.09200 0.10946 0.17500 0.25048 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.02048 0.03659 0.05075 0.07017 0.25648 
+[1] "rota"
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.00000 0.00000 0.00000 0.05615 0.00000 0.98000 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ 0.0000  0.0000  0.0000  0.2003  0.3768  0.9902 
+> 
+> proc.time()
+   user  system elapsed 
+270.959  16.101 291.459 
